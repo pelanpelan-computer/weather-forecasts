@@ -1,34 +1,48 @@
-# pull official base image
-FROM python:3.12-slim-bookworm
+# # First, build the application in the `/app` directory.
+# FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+# ENV UV_COMPILE_BYTECODE=1
+# ENV UV_LINK_MODE=copy
+# WORKDIR /app
+# RUN --mount=type=cache,target=/root/.cache/uv \
+#     --mount=type=bind,source=uv.lock,target=uv.lock \
+#     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+#     uv sync --frozen --no-install-project --no-dev
+# ADD . /app
+# RUN --mount=type=cache,target=/root/.cache/uv \
+#     uv sync --frozen --no-dev
 
-# set work directory
+# # Then, use a final image without uv
+# FROM python:3.12-slim-bookworm
+
+# # Copy the application from the builder
+# COPY --from=builder --chown=app:app /app /app
+
+# WORKDIR /app
+
+# # Set environment variables
+# ENV PYTHONDONTWRITEBYTECODE=1
+# ENV PYTHONUNBUFFERED=1
+# ENV PATH="/app/.venv/bin:$PATH"
+
+# # Expose port 8000
+# EXPOSE 8000
+
+# # Use gunicorn on port 8000
+# CMD ["gunicorn", "--bind", ":8000", "--workers", "2", "weather_app.wsgi"]
+FROM python:3.12-slim-bookworm
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Configure the working directory
 WORKDIR /app
 
-# set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy \
-    UV_PYTHON_DOWNLOADS=never \
-    UV_PROJECT_ENVIRONMENT=/app/.venv
+# Copia só o pyproject.toml e uv.lock (depois melhora para uv.lock fixo)
+COPY pyproject.toml uv.lock* ./
 
-# install uv
-COPY --from=ghcr.io/astral-sh/uv:0.6.17 /uv /uvx /bin/
+# Sync the project into a new environment, asserting the lockfile is up to date
+RUN uv sync --locked
 
-# Since there's no point in shipping lock files, we move them
-# into a directory that is NOT copied into the runtime image.
-# The trailing slash makes COPY create `/_lock/` automagically.
-COPY pyproject.toml uv.lock /_lock/
+# Expõe a porta que o Django vai rodar
+EXPOSE 8000
 
-# Synchronize dependencies.
-# This layer is cached until uv.lock or pyproject.toml change.
-RUN --mount=type=cache,target=/root/.cache \
-    cd /_lock && \
-    uv sync \
-    --frozen \
-    --no-install-project
-
-# copy project
-COPY . .
-
-CMD ["uv", "run", "./manage.py", "runserver", "0.0.0.0:8080"]
-# CMD ["uv", "run", "--with", "gunicorn", "gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "weather_app.wsgi:application"]
+# Comando padrão para iniciar o server
+CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
