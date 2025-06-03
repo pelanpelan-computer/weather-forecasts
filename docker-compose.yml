@@ -48,27 +48,38 @@
 name: weatherapp
 services:
   db:
-    image: postgres:16.5
+    image: postgres:17
+    restart: unless-stopped
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - pg_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_USER=dev_user
-      - POSTGRES_PASSWORD=dev_password
-      - POSTGRES_DB=dev_db
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
   web:
     build: ./testbackend
-    # command: uv run ./manage.py runserver 0.0.0.0:8000
-    # command: python /app/manage.py runserver 0.0.0.0:8000
     command: >
       sh -c "uv run python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./testbackend/:/app/
     ports:
       - 8000:8000
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DEBUG: ${DEBUG}
+      DJANGO_LOGLEVEL: ${DJANGO_LOGLEVEL}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DATABASE_ENGINE: ${DATABASE_ENGINE}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
     env_file:
-      - ./.env.dev
+      - ./.env
     depends_on:
       - db
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  pg_data:
