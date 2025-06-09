@@ -10,7 +10,7 @@ services:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USERNAME}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-  web:
+  backend:
     build: ./backend
     command: >
       sh -c "uv run python manage.py runserver 0.0.0.0:8000"
@@ -34,6 +34,18 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+  # frontend:
+  #     build: ./frontend
+  #     expose:
+  #         - 4321
+  #     ports:
+  #         - 4321:4321
+  #     volumes:
+  #         - ./frontend/src:/app/src
+  #         - ./frontend/public:/app/public
+  #     depends_on:
+  #         - backend
+  #     command: yarn dev
 
 volumes:
   pg_data:

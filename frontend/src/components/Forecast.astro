@@ -1,0 +1,46 @@
+---
+// import astroLogo from "../assets/astro.svg";
+// import background from "../assets/background.svg";
+
+let bla = "asdfasdf";
+---
+
+<div class="container">
+  <form method="get">
+    <input name="q" placeholder="E.g. Enschede" />
+    <button type="submit">Search city</button>
+  </form>
+  <div id="results"></div>
+</div>
+
+<style></style>
+
+<script>
+  import { actions } from "astro:actions";
+  import { navigate } from "astro:transitions/client";
+  const results = document.getElementById("results");
+
+  const form = document.querySelector("form");
+  form?.addEventListener("submit", async (event) => {
+    console.log("Submit");
+    // results?.replaceChildren();
+    event.preventDefault();
+    console.log("Submit1");
+    const formData = new FormData(form);
+    console.log("Submit2");
+    const { data, error } = await actions.listCities(formData);
+    console.log("data form callback", data, error);
+    if (data) {
+      const ul = document.createElement("ul");
+      data.forEach((place: any) => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.appendChild(document.createTextNode(place.name));
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+      results?.appendChild(ul);
+    }
+    // if (!error) navigate("/confirmation");
+  });
+</script>
